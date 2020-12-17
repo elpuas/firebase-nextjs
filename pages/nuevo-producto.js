@@ -1,23 +1,22 @@
-import {useState} from 'react'
+import {useState, useContext} from 'react'
 import Layout from '../components/layout/Layout'
 
 // Styled Components
 import {css} from '@emotion/react'
 import { Formulario, Campo, InputSubmit, Error } from '../components/ui/Formulario'
-import Router from 'next/router'
+import Router, { useRouter } from 'next/router'
 
 // Firebase
-import firebase from '../firebase'
+import { FirebaseContext} from '../firebase'
 
 // Validacion del Formulario
 import useValidation from '../hooks/useValidation'
-import validarCrearCuenta from '../validation/validarCrearCuenta'
+import validarCrearProducto from '../validation/validarCrearProducto'
 
 // state inicial
 const STATE_INICIAL = {
     nombre: '',
     empresa: '',
-    imagen: '',
     url: '',
     descripcion: '',
 }
@@ -26,22 +25,50 @@ const NuevoProducto = () => {
 
     const [error, guardarError] = useState(false)
 
-    const { valores, errores, handleSubmit, handleChange, handleBlur} = useValidation( STATE_INICIAL, validarCrearCuenta, crearCuenta )
+    const { valores, errores, handleSubmit, handleChange, handleBlur} = useValidation( STATE_INICIAL, validarCrearProducto, crearProducto )
 
     const { nombre, empresa, imagen, url, descripcion } = valores
 
+    // hook de routing
+    const router = useRouter();
+
+    // Context con las operaciones crud de firebase
+    const { usuario, firebase } = useContext(FirebaseContext);
+
     /**
-     * Registra el usuario, si registra con exito, envia al usuario a la pagina principal, si falla muestra error.
+     * Registra el producto, si registra con exito, envia al usuario a la pagina principal, si falla muestra error.
      *
      */
-    async function crearCuenta() {
-        try {
-            await firebase.registrar(nombre, email, password)
-            Router.push('/')
-        } catch (error) {
-            console.log('hay error', error.message)
-            guardarError(error.message)
+    async function crearProducto() {
+
+        // Si el ususario no esta activado
+        if(!usuario) {
+            return router.push('/login')
         }
+
+        // Crear objeto del nuevo producto
+        const producto = {
+            nombre,
+            empresa,
+            url,
+            descripcion,
+            votos: 0,
+            comentarios: [],
+            creado: Date.now()
+        }
+
+        // insertarlo en la DB
+        firebase.db.collection('productos').add(producto)
+
+
+
+        // try {
+        //     // await firebase.registrar(nombre, email, password)
+        //     // Router.push('/')
+        // } catch (error) {
+        //     // console.log('hay error', error.message)
+        //     // guardarError(error.message)
+        // }
     }
 
     return (
@@ -83,7 +110,7 @@ const NuevoProducto = () => {
                         />
                     </Campo>
                     {errores.empresa && <Error>{errores.empresa}</Error>}
-                    <Campo>
+                    {/* <Campo>
                         <label htmlFor="nombre">Imagen</label>
                         <input
                         type="file"
@@ -94,13 +121,14 @@ const NuevoProducto = () => {
                         onBlur={handleBlur}
                         />
                     </Campo>
-                    {errores.imagen && <Error>{errores.imagen}</Error>}
+                    {errores.imagen && <Error>{errores.imagen}</Error>} */}
                     <Campo>
                         <label htmlFor="nombre">Imagen</label>
                         <input
                         type="url"
                         id="url"
                         name="url"
+                        placeholder="URL del Producto"
                         value={url}
                         onChange={handleChange}
                         onBlur={handleBlur}
